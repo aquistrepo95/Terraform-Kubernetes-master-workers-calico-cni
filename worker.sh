@@ -1,5 +1,5 @@
 #!/bin/bash
-#t2.micro
+#t3.small
 set -e
 
 # set hostname of node
