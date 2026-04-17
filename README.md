@@ -37,9 +37,14 @@ NB: This may take a few minutes to complete.
   ```
   $ ssh ubuntu@$(terraform output -raw instance_public_ip_master) -i ssh_keys -v
   ```
+  * You should now be connected to the master node.
+  NB: It is also possible to ssh to worker nodes. Replace: (terraform output -raw instance_public_ip_master) in the previous command with      the IP address of the worker node. 
   
-* You should now be connected to the master node.
-* Run the following commands to ensure all nodes in the cluster are available, and all essential Kubernetes control plane components have     been created:
+* Apply the custom-resources.yaml to set up Calico CNI in your cluster.
+  ```
+  $ kubectl apply -f custom-resources.yaml
+  ```  
+* Run the following commands to ensure all nodes in the cluster are available, and all essential Kubernetes control plane components have      been created:
   ```
   ubuntu@master-node:~$ kubectl get nodes
   NAME            STATUS   ROLES           AGE   VERSION
