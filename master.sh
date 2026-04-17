@@ -87,4 +87,4 @@ kubeadm config images pull --cri-socket unix:///var/run/cri-dockerd.sock
 
 # Initialize the Kubernetes cluster
 echo "Initializing the Kubernetes cluster with kubeadm..."
-kubeadm init --cri-socket unix:///var/run/cri-dockerd.sock --pod-network-cidr=10.0.1.0/24
+kubeadm init --cri-socket unix:///var/run/cri-dockerd.sock --pod-network-cidr=10.244.0.0/16
