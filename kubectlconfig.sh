@@ -6,7 +6,7 @@ mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
-# install a pod network add-on (Weave Net)
+# install a pod network add-on (Calico)
 echo "Installing Calico CNI network add-on for pod networking..."
 
 # Install the Tigera Calico operator
