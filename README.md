@@ -71,10 +71,8 @@ NB: This may take a few minutes to complete.
   calico-system     csi-node-driver-9xskj                     2/2     Running   0          63m
   calico-system     csi-node-driver-jchmt                     2/2     Running   0          61m
   calico-system     csi-node-driver-tvmhx                     2/2     Running   0          60m
-  calico-system     goldmane-58f96f7c58-8k4qc                 0/1     Error     0          63m
   calico-system     goldmane-58f96f7c58-dsqnr                 1/1     Running   0          57m
   calico-system     whisker-5b78c7ddd6-6cb7n                  2/2     Running   0          57m
-  calico-system     whisker-5b78c7ddd6-6t4lp                  0/2     Error     0          63m
   kube-system       coredns-7d764666f9-4fhqn                  1/1     Running   0          64m
   kube-system       coredns-7d764666f9-gqzdt                  1/1     Running   0          64m
   kube-system       efs-csi-controller-7b8bdc5484-fwlmc       3/3     Running   0          57m
