@@ -1,5 +1,5 @@
 #!/bin/bash
-#t3.small
+#t2.micro
 set -e
 
 # set hostname of node
@@ -37,6 +37,7 @@ sysctl -p /etc/sysctl.conf
 
 # install container runtime docker
 echo "Installing Docker..."
+sleep 15
 #apt clean -y
 apt update -y
 apt install -y ca-certificates curl apt-transport-https

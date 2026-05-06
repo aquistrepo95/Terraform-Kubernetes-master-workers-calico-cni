@@ -20,3 +20,8 @@ output "instance_public_ip_workers" {
   description = "Public IP addresses of the worker EC2 instances"
   value       = aws_instance.kube_server_worker[*].public_ip
 }
+
+output "security_group_id_workers" {
+  description = "Security group ID for the master EC2 instance"
+  value       = aws_security_group.k8s-worker-sg.id
+}

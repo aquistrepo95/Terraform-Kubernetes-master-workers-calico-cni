@@ -53,15 +53,6 @@ resource "aws_instance" "kube_server_master" {
     ]  
   }
 
-/*
-  provisioner "remote-exec" {
-    inline = [
-        "kubectl apply -f custom-resources.yaml"
-    ]  
-    
-  }
-*/
-
   provisioner "local-exec" {
     command = <<EOF
       ssh ubuntu@${self.public_ip} -o StrictHostKeyChecking=no -i ssh_keys "kubeadm token create --print-join-command" >> ./join_command.sh
@@ -69,6 +60,8 @@ resource "aws_instance" "kube_server_master" {
       echo "--cri-socket unix:///var/run/cri-dockerd.sock" >> join_command.sh
     EOF
   }
+
+  #user_data = templatefile("${path.module}/csi_efs.tftpl",{})
 
   tags = merge(
     var.instance_tags,
@@ -216,6 +209,7 @@ resource "aws_instance" "kube_server_worker" {
   key_name                    = aws_key_pair.public_ssh_key.key_name
   vpc_security_group_ids      = [ aws_security_group.k8s-worker-sg.id ]
   depends_on                  = [ aws_instance.kube_server_master ]
+  iam_instance_profile        = aws_iam_instance_profile.k8s-worker-instance-profile.name 
 
   connection {
     type = "ssh"
@@ -242,6 +236,12 @@ resource "aws_instance" "kube_server_worker" {
         "sudo sh /home/ubuntu/join_command.sh" 
     ]  
   }
+
+  user_data = templatefile("${path.module}/mount_efs.tftpl", {
+    current_node = "Kube-Worker-${count.index + 1}"
+    efs_dns_name = var.efs_dns_name
+
+  })
 
   tags = merge(
     var.instance_tags,
@@ -372,4 +372,104 @@ resource "aws_vpc_security_group_ingress_rule" "Calico_node_cni_worker" {
 resource "aws_key_pair" "public_ssh_key" {
   key_name = "ssh_keys"
   public_key = file("ssh_keys.pub")
+}
+
+################################################################ IAM Policy for CSI driver ###################################################
+resource "aws_iam_policy" "CSI_driver_policy" {
+  name = "csi-driver-policy"
+  description = "IAM policy for Kubernetes CSI driver to manage EFS volumes"
+
+    policy = <<EOT
+  {
+  "Version" : "2012-10-17",
+  "Statement" : [
+    {
+      "Sid" : "AllowDescribe",
+      "Effect" : "Allow",
+      "Action" : [
+        "elasticfilesystem:DescribeAccessPoints",
+        "elasticfilesystem:DescribeFileSystems",
+        "elasticfilesystem:DescribeMountTargets",
+        "ec2:DescribeAvailabilityZones"
+      ],
+      "Resource" : "*"
+    },
+    {
+      "Sid" : "AllowCreateAccessPoint",
+      "Effect" : "Allow",
+      "Action" : [
+        "elasticfilesystem:CreateAccessPoint"
+      ],
+      "Resource" : "*",
+      "Condition" : {
+        "Null" : {
+          "aws:RequestTag/efs.csi.aws.com/cluster" : "false"
+        },
+        "ForAllValues:StringEquals" : {
+          "aws:TagKeys" : "efs.csi.aws.com/cluster"
+        }
+      }
+    },
+    {
+      "Sid" : "AllowTagNewAccessPoints",
+      "Effect" : "Allow",
+      "Action" : [
+        "elasticfilesystem:TagResource"
+      ],
+      "Resource" : "*",
+      "Condition" : {
+        "StringEquals" : {
+          "elasticfilesystem:CreateAction" : "CreateAccessPoint"
+        },
+        "Null" : {
+          "aws:RequestTag/efs.csi.aws.com/cluster" : "false"
+        },
+        "ForAllValues:StringEquals" : {
+          "aws:TagKeys" : "efs.csi.aws.com/cluster"
+        }
+      }
+    },
+    {
+      "Sid" : "AllowDeleteAccessPoint",
+      "Effect" : "Allow",
+      "Action" : "elasticfilesystem:DeleteAccessPoint",
+      "Resource" : "*",
+      "Condition" : {
+        "Null" : {
+          "aws:ResourceTag/efs.csi.aws.com/cluster" : "false"
+        }
+      }
+    }
+  ]
+}
+
+EOT 
+}
+
+resource "aws_iam_role" "k8s-worker-role" {
+  name = "k8s-worker-role"
+  assume_role_policy = <<EOT
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "ec2.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  }
+EOT
+}
+
+resource "aws_iam_role_policy_attachment" "attach-csi-driver-policy" {
+  role       = aws_iam_role.k8s-worker-role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEFSCSIDriverPolicy"
+}
+
+resource "aws_iam_instance_profile" "k8s-worker-instance-profile" {
+  name = "k8s-worker-instance-profile"
+  role = aws_iam_role.k8s-worker-role.name
 }

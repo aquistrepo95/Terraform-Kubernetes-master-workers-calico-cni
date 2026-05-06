@@ -81,7 +81,7 @@ echo "Initializing Kubernetes master node..."
 echo "Kubeadm version..."
 kubeadm version
 
-# Pre-pull necessary images
+# Pre-pull necessary images for Kubernetes
 echo "Pre-pulling necessary Kubernetes images..."
 kubeadm config images pull --cri-socket unix:///var/run/cri-dockerd.sock
 

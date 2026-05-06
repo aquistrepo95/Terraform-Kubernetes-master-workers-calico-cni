@@ -10,7 +10,7 @@ variable "instance_type" {
   type        = map(string)
   default = {
     "master" = "t2.medium",
-    "worker" = "t2.micro"
+    "worker" = "t3.small"
   }
 }
 
@@ -34,4 +34,10 @@ variable "vpc_id_instance" {
 variable "vpc_cidr_block" {
   description = "value for the VPC CIDR block" 
   type        = string
+}
+
+variable "efs_dns_name" {
+  description = "DNS name of the EFS file system to be mounted on EC2 instances"
+  type        = string
+  
 }
