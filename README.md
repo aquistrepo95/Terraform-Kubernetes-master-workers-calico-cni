@@ -5,7 +5,7 @@
 ## Functional Terraform infrastructure project to run a single control plane node and two worker nodes(the configuration could be modified to run as many nodes as needed).
 
 ## This project showcases the following concepts in Terraform:
-* Deploying AWS infrastructure using Terraform to provision components like: VPC, EC2, security groups, etc.
+* Deploying AWS infrastructure using Terraform to provision components like VPC, EC2, security groups, etc.
 * Deploying Kubernetes control plane and worker components to run on AWS infrastructure.
 
 ## Built with:
@@ -15,6 +15,8 @@
 * Kubernetes: Kubeadm, Kubectl, Kubelet.
 * BASH: script to provide Kubernetes, control-plane, and worker components.
 * Calico CNI
+* AWS Elastic File System
+* AWS EFS CSI driver
 
 ## This section will describe: how to deploy the infrastructure on AWS.
 * Prequisite: Terraform is installed, and AWS CLI is installed and configured with keys.
@@ -38,44 +40,55 @@ NB: This may take a few minutes to complete.
   $ ssh ubuntu@$(terraform output -raw instance_public_ip_master) -i ssh_keys -v
   ```
   * You should now be connected to the master node.
-  NB: It is also possible to ssh to worker nodes. Replace: (terraform output -raw instance_public_ip_master) in the previous command with      the IP address of the worker node. 
+  NB: It is also possible to SSH to worker nodes. Replace: (terraform output -raw instance_public_ip_master) in the previous command with         the IP address of the worker node. 
   
-* Apply the custom-resources.yaml to set up Calico CNI in your cluster.
+* Run the following commands to install the AWS CSI driver for EFS on the master Node.
   ```
-  $ kubectl apply -f custom-resources.yaml
-  ```  
-* Run the following commands to ensure all nodes in the cluster are available, and all essential Kubernetes control plane components have      been created:
+  $ helm repo add aws-efs-csi-driver https://kubernetes-sigs.github.io/aws-efs-csi-driver/
+  $ helm repo update aws-efs-csi-driver
+  $ helm upgrade --install aws-efs-csi-driver --namespace kube-system aws-efs-csi-driver/aws-efs-csi-driver
+  ```
+   
+* Run the following commands to ensure all nodes in the cluster are available, and all essential Kubernetes control plane and worker          components have been created:
   ```
   ubuntu@master-node:~$ kubectl get nodes
   NAME            STATUS   ROLES           AGE   VERSION
-  master-node     Ready    control-plane   20m   v1.35.0
-  worker-node-1   Ready    <none>          19m   v1.35.0
-  worker-node-2   Ready    <none>          18m   v1.35.0
+  master-node     Ready    control-plane   63m   v1.35.4
+  worker-node-1   Ready    <none>          59m   v1.35.4
+  worker-node-2   Ready    <none>          59m   v1.35.4
   ```
   ```
   ubuntu@master-node:~$ kubectl get po -A
   NAMESPACE         NAME                                      READY   STATUS    RESTARTS   AGE
-  calico-system     calico-apiserver-5cd597c7d7-58qps         1/1     Running   0          96s
-  calico-system     calico-apiserver-5cd597c7d7-x44hq         1/1     Running   0          96s
-  calico-system     calico-kube-controllers-bb45db999-jw9r9   1/1     Running   0          95s
-  calico-system     calico-node-gztx7                         1/1     Running   0          96s
-  calico-system     calico-node-s8wpc                         1/1     Running   0          96s
-  calico-system     calico-node-v7m6x                         1/1     Running   0          96s
-  calico-system     calico-typha-75b5b5db55-7sg8v             1/1     Running   0          96s
-  calico-system     calico-typha-75b5b5db55-dnwqm             1/1     Running   0          91s
-  calico-system     csi-node-driver-kf624                     2/2     Running   0          95s
-  calico-system     csi-node-driver-p7lm6                     2/2     Running   0          95s
-  calico-system     csi-node-driver-rz9fq                     2/2     Running   0          95s
-  calico-system     goldmane-58f96f7c58-l7cll                 1/1     Running   0          96s
-  calico-system     whisker-7f5659f586-v8kqg                  2/2     Running   0          77s
-  kube-system       coredns-7d764666f9-bnj6f                  1/1     Running   0          9m35s
-  kube-system       coredns-7d764666f9-f4rxr                  1/1     Running   0          9m34s
-  kube-system       etcd-master-node                          1/1     Running   0          9m38s
-  kube-system       kube-apiserver-master-node                1/1     Running   0          9m42s
-  kube-system       kube-controller-manager-master-node       1/1     Running   0          9m39s
-  kube-system       kube-proxy-j7tqm                          1/1     Running   0          9m35s
-  kube-system       kube-proxy-qfxzz                          1/1     Running   0          8m13s
-  kube-system       kube-proxy-ztgfg                          1/1     Running   0          8m5s
-  kube-system       kube-scheduler-master-node                1/1     Running   0          9m41s
-  tigera-operator   tigera-operator-6cf4cccc57-f4hch          1/1     Running   0          4m10s
+  calico-system     calico-apiserver-7454b75f6f-lmdc9         1/1     Running   0          63m
+  calico-system     calico-apiserver-7454b75f6f-p7nnz         1/1     Running   0          63m
+  calico-system     calico-kube-controllers-877d84dbc-6kfhv   1/1     Running   0          63m
+  calico-system     calico-node-kk4db                         1/1     Running   0          60m
+  calico-system     calico-node-l4pm8                         1/1     Running   0          61m
+  calico-system     calico-node-rh42n                         1/1     Running   0          63m
+  calico-system     calico-typha-5fd768d787-5vzgp             1/1     Running   0          60m
+  calico-system     calico-typha-5fd768d787-c77wr             1/1     Running   0          63m
+  calico-system     csi-node-driver-9xskj                     2/2     Running   0          63m
+  calico-system     csi-node-driver-jchmt                     2/2     Running   0          61m
+  calico-system     csi-node-driver-tvmhx                     2/2     Running   0          60m
+  calico-system     goldmane-58f96f7c58-8k4qc                 0/1     Error     0          63m
+  calico-system     goldmane-58f96f7c58-dsqnr                 1/1     Running   0          57m
+  calico-system     whisker-5b78c7ddd6-6cb7n                  2/2     Running   0          57m
+  calico-system     whisker-5b78c7ddd6-6t4lp                  0/2     Error     0          63m
+  kube-system       coredns-7d764666f9-4fhqn                  1/1     Running   0          64m
+  kube-system       coredns-7d764666f9-gqzdt                  1/1     Running   0          64m
+  kube-system       efs-csi-controller-7b8bdc5484-fwlmc       3/3     Running   0          57m
+  kube-system       efs-csi-controller-7b8bdc5484-qgsdw       3/3     Running   0          57m
+  kube-system       efs-csi-node-6q59n                        3/3     Running   0          57m
+  kube-system       efs-csi-node-jnl55                        3/3     Running   0          57m
+  kube-system       efs-csi-node-m9dvv                        3/3     Running   0          57m
+  kube-system       etcd-master-node                          1/1     Running   0          65m
+  kube-system       kube-apiserver-master-node                1/1     Running   0          65m
+  kube-system       kube-controller-manager-master-node       1/1     Running   0          65m
+  kube-system       kube-proxy-bttzq                          1/1     Running   0          61m
+  kube-system       kube-proxy-d8slz                          1/1     Running   0          64m
+  kube-system       kube-proxy-kpgcd                          1/1     Running   0          60m
+  kube-system       kube-scheduler-master-node                1/1     Running   0          65m
+  tigera-operator   tigera-operator-6cf4cccc57-dwzds          1/1     Running   0          64m
+
   ```    
